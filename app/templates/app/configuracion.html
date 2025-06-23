@@ -1,0 +1,436 @@
+{% extends 'app/base.html' %}
+
+{% block title %}Alugest - Configuración de Obras{% endblock %}
+{% load static %}
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/configuracion.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Header Principal -->
+    <div class="page-header fade-in">
+        <h1 class="page-title">
+            <i class="fas fa-cogs me-3"></i>
+            Configuración de Obras
+        </h1>
+        <p class="page-subtitle">Sistema automático ultra simplificado - Solo horas estimadas por obra</p>
+    </div>
+
+    <!-- Controles Superiores -->
+    <div class="top-controls fade-in">
+        <!-- Configuración Global -->
+        <div class="control-card">
+            <div class="card-header success">
+                <h5 class="card-title">
+                    <i class="fas fa-cog"></i>
+                    Configuración Global
+                </h5>
+                <p class="card-subtitle">Parámetros generales del sistema</p>
+            </div>
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="form-group">
+                        <label class="form-label">{{ config_form.horas_por_dia.label }}</label>
+                        {{ config_form.horas_por_dia }}
+                        <div class="form-text">{{ config_form.horas_por_dia.help_text }}</div>
+                    </div>
+                    <button type="submit" name="actualizar_config" class="btn btn-success-modern btn-modern w-100">
+                        <i class="fas fa-save me-2"></i>
+                        Actualizar Configuración
+                    </button>
+                </form>
+                
+                <div class="info-grid">
+                    <div class="info-item">
+                        <div class="info-icon">
+                            <i class="fas fa-clock"></i>
+                        </div>
+                        <p class="info-text"><strong>{{ config.horas_por_dia }}</strong> horas por día</p>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-icon">
+                            <i class="fas fa-calendar-times"></i>
+                        </div>
+                        <p class="info-text">Sin trabajo en fines de semana</p>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-icon">
+                            <i class="fas fa-magic"></i>
+                        </div>
+                        <p class="info-text">Limpieza automática</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Nueva Obra -->
+        <div class="control-card">
+            <div class="card-header primary">
+                <h5 class="card-title">
+                    <i class="fas fa-plus"></i>
+                    Nueva Obra
+                </h5>
+                <p class="card-subtitle">Agregar obra al sistema</p>
+            </div>
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="form-group">
+                        <label class="form-label">{{ obra_form.nombre.label }}</label>
+                        {{ obra_form.nombre }}
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">{{ obra_form.horas_estimadas.label }}</label>
+                        {{ obra_form.horas_estimadas }}
+                        <div class="form-text">{{ obra_form.horas_estimadas.help_text }}</div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">{{ obra_form.color.label }}</label>
+                        {{ obra_form.color }}
+                        <div class="form-text">{{ obra_form.color.help_text }}</div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">{{ obra_form.descripcion.label }}</label>
+                        {{ obra_form.descripcion }}
+                    </div>
+                    <button type="submit" name="agregar_obra" class="btn btn-primary-modern btn-modern w-100">
+                        <i class="fas fa-plus me-2"></i>
+                        Agregar Obra
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Lista de Obras -->
+    <div class="obras-section fade-in">
+        <div class="obras-header">
+            <h5 class="card-title">
+                <i class="fas fa-list"></i>
+                Gestión de Obras ({{ obras.count }} obras)
+            </h5>
+            
+            <small>
+                Arrastra para cambiar el orden de ejecución. Las obras que se están trabajando hoy están protegidas.
+            </small>
+        </div>
+        
+        <div class="obras-content">
+            {% if obras %}
+                <div id="obras-list">
+                    {% for obra in obras %}
+                        <div class="obra-card" 
+                             data-obra-id="{{ obra.id }}"
+                             style="--obra-color: {{ obra.color }};">
+                            
+                            <div class="obra-header">
+                                <i class="fas fa-grip-vertical drag-handle"></i>
+                                <span class="obra-badge">#{{ obra.orden }}</span>
+                                <h6 class="obra-title">{{ obra.nombre }}</h6>
+                                {% if obra.esta_siendo_trabajada_hoy %}
+                                    <span class="badge bg-success">
+                                        <i class="fas fa-tools me-1"></i>Trabajando HOY
+                                    </span>
+                                {% endif %}
+                            </div>
+                            
+                            {% if obra.descripcion %}
+                                <p class="obra-description">{{ obra.descripcion }}</p>
+                            {% endif %}
+                            
+                            <div class="obra-stats">
+                                <div class="stat-item">
+                                    <div class="stat-icon">
+                                        <i class="fas fa-clock"></i>
+                                    </div>
+                                    <div class="stat-value">
+                                        {{ obra.horas_estimadas }}h totales
+                                    </div>
+                                </div>
+                                
+                                <div class="stat-item">
+                                    <div class="stat-icon">
+                                        <i class="fas fa-calendar"></i>
+                                    </div>
+                                    <div class="stat-value">
+                                        {% if obra.fecha_inicio %}
+                                            {{ obra.fecha_inicio|date:"d/m/Y" }}
+                                        {% else %}
+                                            Por programar
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                
+                                <div class="stat-item">
+                                    <div class="stat-icon">
+                                        <i class="fas fa-calendar-check"></i>
+                                    </div>
+                                    <div class="stat-value">
+                                        {% if obra.fecha_fin %}
+                                            {{ obra.fecha_fin|date:"d/m/Y" }}
+                                        {% else %}
+                                            Por programar
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                
+                                <div class="stat-item">
+                                    <div class="stat-icon">
+                                        <i class="fas fa-palette"></i>
+                                    </div>
+                                    <div class="stat-value">
+                                        <div class="color-preview" style="background: {{ obra.color }};"></div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Botones de acción (aparecen en hover) -->
+                            <div class="obra-actions">
+                                <!-- Botón editar -->
+                                <button class="action-btn edit"
+                                        data-bs-toggle="modal" 
+                                        data-bs-target="#editObraModal"
+                                        data-obra-id="{{ obra.id }}"
+                                        data-obra-nombre="{{ obra.nombre }}"
+                                        data-obra-descripcion="{{ obra.descripcion }}"
+                                        data-obra-horas="{{ obra.horas_estimadas }}"
+                                        data-obra-color="{{ obra.color }}"
+                                        title="Editar obra">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                
+                                <!-- Botón eliminar -->
+                                <a href="{% url 'app:eliminar_obra' obra.id %}" 
+                                   class="action-btn delete"
+                                   onclick="return confirm('¿Estás seguro de eliminar esta obra?')"
+                                   title="Eliminar obra">
+                                    <i class="fas fa-trash"></i>
+                                </a>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="empty-state">
+                    <div class="empty-icon">
+                        <i class="fas fa-inbox"></i>
+                    </div>
+                    <h6>No hay obras programadas</h6>
+                    <p>Agrega tu primera obra usando el formulario de arriba</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    {% if obras %}
+        <div class="info-banner">
+            <i class="fas fa-info-circle me-2"></i>
+            <strong>Sistema ultra simplificado:</strong> Solo indicas las horas totales de cada obra. El sistema programa automáticamente las fechas y elimina las obras pasadas.
+        </div>
+    {% endif %}
+</div>
+
+<!-- Modal para editar obra -->
+<div class="modal fade" id="editObraModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-edit me-2"></i>
+                    Editar Obra
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="post" id="editObraForm">
+                <div class="modal-body">
+                    {% csrf_token %}
+                    <input type="hidden" name="editar_obra" value="1">
+                    <input type="hidden" name="obra_id" id="edit_obra_id">
+                    
+                    <div class="form-group">
+                        <label class="form-label">Nombre de la obra</label>
+                        <input type="text" name="nombre" id="edit_nombre" class="form-control" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Horas estimadas totales</label>
+                        <input type="number" name="horas_estimadas" id="edit_horas_estimadas" class="form-control" min="1" required>
+                        <div class="form-text">Total de horas que tardará la obra completa</div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Color en el calendario</label>
+                        <input type="color" name="color" id="edit_color" class="form-control form-control-color">
+                        <div class="form-text">Color que aparecerá en el calendario para identificar esta obra</div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Descripción (opcional)</label>
+                        <textarea name="descripcion" id="edit_descripcion" class="form-control" rows="3"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times me-1"></i>
+                        Cancelar
+                    </button>
+                    <button type="submit" class="btn btn-primary-modern btn-modern">
+                        <i class="fas fa-save me-1"></i>
+                        Guardar Cambios
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/sortablejs/1.15.0/Sortable.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    var obrasList = document.getElementById('obras-list');
+    
+    // Hacer todas las obras sortables
+    if (obrasList) {
+        var sortable = Sortable.create(obrasList, {
+            handle: '.drag-handle',
+            animation: 200,
+            ghostClass: 'sortable-ghost',
+            chosenClass: 'sortable-chosen',
+            dragClass: 'sortable-drag',
+            onEnd: function(evt) {
+                var obraItems = obrasList.querySelectorAll('.obra-card');
+                var nuevoOrden = [];
+                
+                obraItems.forEach(function(item) {
+                    nuevoOrden.push(item.getAttribute('data-obra-id'));
+                });
+                
+                actualizarOrdenObras(nuevoOrden);
+            }
+        });
+    }
+    
+    // Manejar clic en botón editar
+    document.addEventListener('click', function(e) {
+        if (e.target.closest('.action-btn.edit')) {
+            e.preventDefault();
+            var btn = e.target.closest('.action-btn.edit');
+            
+            // Llenar el modal con los datos de la obra
+            document.getElementById('edit_obra_id').value = btn.dataset.obraId;
+            document.getElementById('edit_nombre').value = btn.dataset.obraNombre;
+            document.getElementById('edit_descripcion').value = btn.dataset.obraDescripcion || '';
+            document.getElementById('edit_horas_estimadas').value = btn.dataset.obraHoras;
+            document.getElementById('edit_color').value = btn.dataset.obraColor;
+        }
+    });
+    
+    function actualizarOrdenObras(ordenObras) {
+        var loadingToast = mostrarToast('Reordenando obras...', 'info', false);
+        
+        fetch('{% url "app:actualizar_orden_obras" %}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify({
+                orden_obras: ordenObras
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            loadingToast.hide();
+            
+            if (data.success) {
+                mostrarToast('¡Orden actualizado!', 'success');
+                actualizarNumerosOrden();
+            } else {
+                mostrarToast('Error: ' + data.error, 'danger');
+            }
+        })
+        .catch(error => {
+            loadingToast.hide();
+            mostrarToast('Error de conexión. Inténtalo de nuevo.', 'danger');
+            console.error('Error:', error);
+        });
+    }
+    
+    function actualizarNumerosOrden() {
+        var obraItems = document.querySelectorAll('.obra-card');
+        obraItems.forEach(function(item, index) {
+            var badge = item.querySelector('.obra-badge');
+            if (badge) {
+                badge.textContent = '#' + (index + 1);
+            }
+        });
+    }
+    
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+    
+    function mostrarToast(mensaje, tipo, autohide = true) {
+        var toastId = 'toast-' + Date.now();
+        var iconClass = {
+            'success': 'fas fa-check-circle',
+            'danger': 'fas fa-exclamation-circle',
+            'warning': 'fas fa-exclamation-triangle',
+            'info': 'fas fa-info-circle'
+        }[tipo] || 'fas fa-info-circle';
+        
+        var toastHtml = `
+            <div id="${toastId}" class="toast align-items-center text-white bg-${tipo} border-0" role="alert">
+                <div class="d-flex">
+                    <div class="toast-body">
+                        <i class="${iconClass} me-2"></i>
+                        ${mensaje}
+                    </div>
+                    <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+                </div>
+            </div>
+        `;
+        
+        var toastContainer = document.getElementById('toast-container');
+        if (!toastContainer) {
+            toastContainer = document.createElement('div');
+            toastContainer.id = 'toast-container';
+            toastContainer.className = 'toast-container position-fixed bottom-0 end-0 p-3';
+            toastContainer.style.zIndex = '1055';
+            document.body.appendChild(toastContainer);
+        }
+        
+        toastContainer.insertAdjacentHTML('beforeend', toastHtml);
+        
+        var toastElement = document.getElementById(toastId);
+        var toast = new bootstrap.Toast(toastElement, {
+            autohide: autohide,
+            delay: tipo === 'success' ? 3000 : 5000
+        });
+        
+        toast.show();
+        
+        toastElement.addEventListener('hidden.bs.toast', function() {
+            toastElement.remove();
+        });
+        
+        return toast;
+    }
+});
+</script>
+{% endblock %}

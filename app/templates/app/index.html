@@ -1,0 +1,201 @@
+{% extends 'app/base.html' %}
+
+{% block title %}Alugest - Calendario de Obras{% endblock %}
+{% load static %}
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/index.css' %}">
+<style>
+.stats-cards {
+    margin-bottom: 2rem;
+}
+.stat-card {
+    background: white;
+    border-radius: 0.5rem;
+    padding: 1.5rem;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    text-align: center;
+    border-left: 4px solid #10b981;
+}
+.stat-number {
+    font-size: 2rem;
+    font-weight: bold;
+    margin-bottom: 0.5rem;
+    color: #10b981;
+}
+.stat-label {
+    color: #6b7280;
+    font-size: 0.875rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    
+    <div class="col-12">
+        <div class="calendar-container fade-in">
+            <div class="calendar-header">
+                <h1>
+                    <i class="fas fa-calendar-alt me-3"></i>
+                    Calendario de Obras
+                </h1>
+                <p>Planificación automática de proyectos</p>
+            </div>
+            
+            <div class="calendar-body">
+                <div id="calendar"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para detalles de obra -->
+<div class="modal fade" id="obraModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="obraModalTitle">
+                    <i class="fas fa-info-circle me-2"></i>
+                    Detalles de la Obra
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="obraModalBody">
+                <!-- Contenido dinámico -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times me-1"></i>
+                    Cerrar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    var calendarEl = document.getElementById('calendar');
+    var eventos = {{ eventos|safe }};
+    
+    var calendar = new FullCalendar.Calendar(calendarEl, {
+        locale: 'es',
+        initialView: 'dayGridMonth',
+        headerToolbar: {
+            left: 'prev,next today',
+            center: 'title',
+            right: 'dayGridMonth,listWeek'
+        },
+        buttonText: {
+            today: 'Hoy',
+            month: 'Mes',
+            list: 'Lista'
+        },
+        weekends: true,
+        businessHours: {
+            daysOfWeek: [1, 2, 3, 4, 5],
+            startTime: '08:00',
+            endTime: '18:00',
+        },
+        events: eventos,
+        eventClick: function(info) {
+            var event = info.event;
+            document.getElementById('obraModalTitle').innerHTML = `
+                <i class="fas fa-info-circle me-2"></i>
+                ${event.title}
+            `;
+            
+            var modalBody = document.getElementById('obraModalBody');
+            
+            var contenido = `
+                <div class="row g-4">
+                    <div class="col-md-6">
+                        <div class="obra-detail-item">
+                            <div class="obra-detail-label">Descripción</div>
+                            <div class="obra-detail-value">${event.extendedProps.description || 'Sin descripción especificada'}</div>
+                        </div>
+                        
+                        <div class="obra-detail-item">
+                            <div class="obra-detail-label">Período de Ejecución</div>
+                            <div class="obra-detail-value">
+                                <i class="fas fa-play-circle text-success me-1"></i>
+                                Inicio: ${event.start.toLocaleDateString('es-ES', { 
+                                    weekday: 'long', 
+                                    year: 'numeric', 
+                                    month: 'long', 
+                                    day: 'numeric' 
+                                })}<br>
+                                <i class="fas fa-stop-circle text-danger me-1"></i>
+                                Fin: ${new Date(event.end.getTime() - 86400000).toLocaleDateString('es-ES', { 
+                                    weekday: 'long', 
+                                    year: 'numeric', 
+                                    month: 'long', 
+                                    day: 'numeric' 
+                                })}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <div class="obra-detail-item">
+                            <div class="obra-detail-label">Información del Proyecto</div>
+                            <div class="obra-detail-value">
+                                <i class="fas fa-clock text-primary me-1"></i>
+                                ${event.extendedProps.horas_estimadas} horas totales<br>
+                                <i class="fas fa-calendar-day text-info me-1"></i>
+                                ${event.extendedProps.dias_necesarios} días laborables
+                            </div>
+                        </div>
+                        
+                        <div class="obra-detail-item">
+                            <div class="obra-detail-label">Color Identificativo</div>
+                            <div class="obra-detail-value">
+                                <div style="display: inline-block; width: 30px; height: 20px; background: ${event.backgroundColor}; border-radius: 4px; border: 1px solid #ddd; vertical-align: middle; margin-right: 8px;"></div>
+                                ${event.backgroundColor}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="alert alert-info mt-4">
+                    <i class="fas fa-info-circle me-2"></i>
+                    <strong>Sistema automático:</strong> Las obras pasadas se eliminan automáticamente. Las obras que se están trabajando hoy no se mueven al reordenar.
+                </div>
+            `;
+            
+            modalBody.innerHTML = contenido;
+            
+            var modal = new bootstrap.Modal(document.getElementById('obraModal'));
+            modal.show();
+        },
+        displayEventTime: false,
+        height: 600,
+        dayMaxEvents: 4,
+        moreLinkClick: 'popover',
+        eventDidMount: function(info) {
+            info.el.style.cursor = 'pointer';
+            var tooltipText = `${info.event.title} - ${info.event.extendedProps.horas_estimadas}h`;
+            info.el.title = tooltipText;
+        },
+        dayCellDidMount: function(info) {
+            if (info.date.getDay() === 0 || info.date.getDay() === 6) {
+                info.el.classList.add('weekend-day');
+            }
+        },
+        eventConstraint: {
+            daysOfWeek: [1, 2, 3, 4, 5]
+        }
+    });
+    
+    calendar.render();
+    
+    window.addEventListener('resize', function() {
+        calendar.updateSize();
+    });
+});
+</script>
+{% endblock %}
