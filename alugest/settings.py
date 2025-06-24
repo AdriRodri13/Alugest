@@ -7,9 +7,20 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # Seguridad
 SECRET_KEY = os.environ.get('SECRET_KEY', 'insegura-por-defecto')
 DEBUG = os.environ.get('DEBUG', 'False') == 'True'
-ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', '').split(',')
-CSRF_TRUSTED_ORIGINS = os.environ.get('CSRF_TRUSTED_ORIGINS', '').split(',')
 
+DEBUG = True
+
+if DEBUG:
+    # 🌐 Configuración local para desarrollo
+    ALLOWED_HOSTS = ['*']
+    CSRF_TRUSTED_ORIGINS = [
+        "http://localhost:8000",
+        "http://127.0.0.1:8000"
+    ]
+else:
+    # 🌍 Configuración para producción
+    ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', '').split(',')
+    CSRF_TRUSTED_ORIGINS = os.environ.get('CSRF_TRUSTED_ORIGINS', '').split(',')
 
 # Aplicaciones
 INSTALLED_APPS = [
@@ -53,9 +64,17 @@ TEMPLATES = [
 WSGI_APPLICATION = 'alugest.wsgi.application'
 
 # Base de datos PostgreSQL
-DATABASES = {
-    'default': dj_database_url.config(conn_max_age=600)
-}
+if DEBUG:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
+        }
+    }
+else:
+    DATABASES = {
+        'default': dj_database_url.config(conn_max_age=600)
+    }
 
 # Validación de contraseñas
 AUTH_PASSWORD_VALIDATORS = [
