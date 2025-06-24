@@ -8,8 +8,6 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = os.environ.get('SECRET_KEY', 'insegura-por-defecto')
 DEBUG = os.environ.get('DEBUG', 'False') == 'True'
 
-DEBUG = True
-
 if DEBUG:
     # 🌐 Configuración local para desarrollo
     ALLOWED_HOSTS = ['*']
