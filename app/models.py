@@ -38,51 +38,56 @@ class ConfiguracionGlobal(models.Model):
             print(f"Error al limpiar obras pasadas: {e}")
     
     def recalcular_todas_las_obras(self):
-        """Recalcula todas las obras - NO mueve las que se están trabajando hoy"""
+        """Recalcula todas las obras, apilando varias por día según disponibilidad de horas"""
         try:
             hoy = date.today()
-            
-            # Obtener todas las obras ordenadas
-            todas_las_obras = Obra.objects.all().order_by('orden')
-            
-            if not todas_las_obras.exists():
+            obras = Obra.objects.all().order_by('orden')
+            if not obras.exists():
                 return
-            
-            # Encontrar punto de inicio considerando obras que se están trabajando hoy
-            fecha_inicio = hoy
-            while fecha_inicio.weekday() >= 5:
-                fecha_inicio += timedelta(days=1)
-            
-            for obra in todas_las_obras:
-                # NO recalcular si la obra se está trabajando hoy
+
+            horas_por_dia = self.horas_por_dia
+            calendario = {}  # fecha -> horas_usadas
+            fecha_actual = hoy
+
+            # Preparar función para buscar el siguiente día laborable con espacio
+            def siguiente_dia_laborable(fecha):
+                while fecha.weekday() >= 5:
+                    fecha += timedelta(days=1)
+                return fecha
+
+            fecha_actual = siguiente_dia_laborable(fecha_actual)
+
+            for obra in obras:
                 if obra.esta_siendo_trabajada_hoy():
-                    # Usar su fecha de fin para calcular la siguiente
-                    if obra.fecha_fin >= fecha_inicio:
-                        fecha_inicio = obra.fecha_fin + timedelta(days=1)
-                        while fecha_inicio.weekday() >= 5:
-                            fecha_inicio += timedelta(days=1)
+                    fecha_actual = obra.fecha_fin + timedelta(days=1)
+                    fecha_actual = siguiente_dia_laborable(fecha_actual)
                     continue
-                
-                # Solo recalcular obras futuras o sin fechas
-                if not obra.fecha_inicio or obra.fecha_inicio >= hoy:
-                    fecha_inicio_obra, fecha_fin_obra = obra.calcular_fechas(fecha_inicio, self.horas_por_dia)
-                    obra.fecha_inicio = fecha_inicio_obra
-                    obra.fecha_fin = fecha_fin_obra
+
+                horas_restantes = obra.horas_estimadas
+                fechas_asignadas = []
+
+                while horas_restantes > 0:
+                    fecha_actual = siguiente_dia_laborable(fecha_actual)
+                    horas_ocupadas = calendario.get(fecha_actual, 0)
+                    horas_disponibles = horas_por_dia - horas_ocupadas
+
+                    if horas_disponibles > 0:
+                        horas_a_usar = min(horas_restantes, horas_disponibles)
+                        calendario[fecha_actual] = horas_ocupadas + horas_a_usar
+                        horas_restantes -= horas_a_usar
+                        fechas_asignadas.append(fecha_actual)
+
+                    if horas_restantes > 0:
+                        fecha_actual += timedelta(days=1)
+
+                if fechas_asignadas:
+                    obra.fecha_inicio = fechas_asignadas[0]
+                    obra.fecha_fin = fechas_asignadas[-1]
                     obra.save(update_fields=['fecha_inicio', 'fecha_fin'])
-                    
-                    if fecha_fin_obra:
-                        fecha_inicio = fecha_fin_obra + timedelta(days=1)
-                        while fecha_inicio.weekday() >= 5:
-                            fecha_inicio += timedelta(days=1)
-                elif obra.fecha_fin:
-                    # Obra ya empezada (pero no trabajándose hoy), usar su fecha fin
-                    if obra.fecha_fin >= fecha_inicio:
-                        fecha_inicio = obra.fecha_fin + timedelta(days=1)
-                        while fecha_inicio.weekday() >= 5:
-                            fecha_inicio += timedelta(days=1)
-                            
+
         except Exception as e:
             print(f"Error al recalcular obras: {e}")
+
     
     @classmethod
     def get_configuracion(cls):
